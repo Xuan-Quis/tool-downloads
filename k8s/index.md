@@ -3,13 +3,16 @@
 - [Hướng dẫn cài đặt Kubernetes với CRI-O](#hướng-dẫn-cài-đặt-kubernetes-với-cri-o)
 - [Hướng dẫn cài đặt với containerd](#hướng-dẫn-cài-đặt-với-containerd)
 
-[Cài đặt bằng ansible](#cài-đặt-tự-động-ansible)
+[Cài đặt bằng ansible](#cài-đặt-tự-động-bằng-ansible)
 
-# Cài đặt thủ công 
+[Cài đặt bằng kubepray](#cài-đặt-bằng-kubepray)
+
+# Cài đặt thủ công
 
 ## Hướng dẫn cài đặt Kubernetes với CRI-O
 
 ### Bước 1: Cập nhật hệ thống
+
 ```bash
 # Cập nhật và nâng cấp các gói
 sudo apt update && sudo apt -y upgrade
@@ -22,6 +25,7 @@ sudo apt update -y
 ```
 
 #### Cài đặt các gói cần thiết
+
 ```bash
 # Cài đặt curl và apt-transport-https
 sudo apt -y install curl apt-transport-https
@@ -30,6 +34,7 @@ sudo apt -y install curl apt-transport-https
 ### Bước 2: Cài đặt Kubernetes
 
 #### Thêm repository Kubernetes
+
 ```bash
 # Thêm GPG key của Google
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
@@ -42,6 +47,7 @@ sudo apt update
 ```
 
 #### Cài đặt các thành phần Kubernetes
+
 ```bash
 # Cài đặt kubelet, kubeadm, kubectl và các công cụ khác
 sudo apt -y install vim git curl wget kubelet kubeadm kubectl
@@ -55,7 +61,8 @@ kubectl version --client && kubeadm version
 
 ### Bước 3: Cấu hình hệ thống
 
-####  Vô hiệu hóa swap
+#### Vô hiệu hóa swap
+
 ```bash
 # Comment out swap trong fstab
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
@@ -74,13 +81,15 @@ free -h
 ```
 
 #### Cấu hình kernel modules
+
 ```bash
 # Load các module cần thiết
 sudo modprobe overlay
 sudo modprobe br_netfilter
 ```
 
-####  Cấu hình sysctl
+#### Cấu hình sysctl
+
 ```bash
 # Tạo file cấu hình sysctl cho Kubernetes
 sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
@@ -96,6 +105,7 @@ sudo sysctl --system
 ### Bước 4: Cài đặt CRI-O Container Runtime
 
 #### Thêm repository CRI-O
+
 ```bash
 # Chuyển sang root user
 sudo su -
@@ -117,6 +127,7 @@ su - ubuntu
 ```
 
 #### Cài đặt CRI-O
+
 ```bash
 # Cài đặt CRI-O
 sudo apt install cri-o cri-o-runc -y
@@ -136,18 +147,21 @@ sudo systemctl status crio
 ### Bước 5: Cấu hình Kubernetes
 
 #### Kích hoạt kubelet
+
 ```bash
 # Kích hoạt kubelet service
 sudo systemctl enable kubelet
 ```
 
-####  Pull Kubernetes images
+#### Pull Kubernetes images
+
 ```bash
 # Pull các container images cần thiết
 sudo kubeadm config images pull --cri-socket unix:///var/run/crio/crio.sock
 ```
 
-####  Áp dụng cấu hình sysctl
+#### Áp dụng cấu hình sysctl
+
 ```bash
 # Áp dụng lại cấu hình sysctl
 sudo sysctl -p
@@ -156,48 +170,63 @@ sudo sysctl -p
 ## Hướng dẫn cài đặt với containerd
 
 ### Bước 1: Cập nhật hệ thống
+
 ```bash
 apt update && apt upgrade -y
 # Cài đặt các gói cần thiết
 sudo apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
 ```
+
 ### Bước 2: Cấu hình hệ thống
+
 #### Tắt swap
+
 ```bash
 sudo swapoff -a
 # Tắt hoàn toàn swap(not recommend)
 sudo sed -i '/swap.img/s/^/#/' /etc/fstab
 ```
+
 #### Cấu hình kernel
+
 ```bash
 echo "overlay" | sudo tee -a /etc/modules-load.d/containerd.conf
 
-echo "br_netfilter" | sudo tee -a /etc/modules-load.d/containerd.conf 
+echo "br_netfilter" | sudo tee -a /etc/modules-load.d/containerd.conf
 EOF
 # Cài đặt kernel
 sudo modprobe overlay
 sudo modprobe br_netfilter
 ```
+
 #### Cấu hình mạng
+
 ```bash
 echo "net.bridge.bridge-nf-call-ip6tables = 1" | sudo tee -a /etc/sysctl.d/kubernetes.conf
 echo "net.bridge.bridge-nf-call-iptables = 1" | sudo tee -a /etc/sysctl.d/kubernetes.conf
 echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.d/kubernetes.conf
 sudo sysctl --system
 ```
+
 ### Cài đặt container runtime interface: containerd
+
 #### Thêm các gói
+
 ```bash
 sudo apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/docker.gpg
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 ```
+
 #### cài đặt containerd
+
 ```bash
 sudo apt update -y
 sudo apt install -y containerd.io
 ```
+
 ###$ Cấu hình containerd
+
 ```bash
 containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
 sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
@@ -207,6 +236,7 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.
 sudo systemctl restart containerd
 sudo systemctl enable containerd
 ```
+
 ### Cài đặt k8s
 
 ```bash
@@ -288,6 +318,7 @@ ansible-playbook -i hosts initial.yml
 ```
 
 Playbook này sẽ:
+
 - Tạo user `ubuntu` trên tất cả node
 - Cấp quyền sudo không mật khẩu cho user `ubuntu`
 - Thêm SSH public key vào `authorized_keys`
@@ -300,6 +331,7 @@ ansible-playbook -i hosts kube-dependencies.yml
 ```
 
 Playbook này sẽ:
+
 - Cài đặt Docker với cgroup driver systemd
 - Thêm repository Kubernetes
 - Cài đặt kubelet, kubeadm (tất cả node)
@@ -313,6 +345,7 @@ ansible-playbook -i hosts control-plane.yml
 ```
 
 Playbook này sẽ:
+
 - Chạy `kubeadm init --pod-network-cidr=10.244.0.0/16`
 - Tạo thư mục `.kube` cho user ubuntu
 - Copy file cấu hình admin.conf
@@ -326,6 +359,7 @@ ansible-playbook -i hosts workers.yml
 ```
 
 Playbook này sẽ:
+
 - Lấy lệnh join từ control plane
 - Thực thi lệnh join trên các worker node
 
@@ -355,6 +389,7 @@ ssh ubuntu@<IP_Master> "kubectl get pods -n kube-system"
 ## Xử lý lỗi thường gặp
 
 ### Lỗi 1: Swap chưa tắt
+
 ```bash
 # Trên từng node, chạy:
 sudo swapoff -a
@@ -362,6 +397,7 @@ sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 ```
 
 ### Lỗi 2: Docker cgroup driver
+
 ```bash
 # Kiểm tra file /etc/docker/daemon.json
 cat /etc/docker/daemon.json
@@ -376,6 +412,7 @@ sudo systemctl restart docker
 ```
 
 ### Lỗi 3: Mạng pod không hoạt động
+
 ```bash
 # Kiểm tra Flannel pods
 kubectl get pods -n kube-flannel
@@ -386,21 +423,22 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 ```
 
 ### Lỗi 4: Version mismatch
+
 Nếu muốn dùng phiên bản Kubernetes khác, chỉnh sửa file `kube-dependencies.yml`:
 
 ```yaml
 # Thay đổi các dòng này:
 - name: install kubelet
   apt:
-    name: kubelet=1.30.0-00  # Thay đổi version
+    name: kubelet=1.30.0-00 # Thay đổi version
 
-- name: install kubeadm  
+- name: install kubeadm
   apt:
-    name: kubeadm=1.30.0-00  # Thay đổi version
+    name: kubeadm=1.30.0-00 # Thay đổi version
 
 - name: install kubectl
   apt:
-    name: kubectl=1.30.0-00  # Thay đổi version
+    name: kubectl=1.30.0-00 # Thay đổi version
 ```
 
 ## Lưu ý quan trọng
@@ -414,7 +452,91 @@ Nếu muốn dùng phiên bản Kubernetes khác, chỉnh sửa file `kube-depen
 ## Kiểm tra cuối cùng
 
 Sau khi hoàn tất, cluster sẽ có:
+
 - 1 control plane node (Ready)
-- 2 worker nodes (Ready)  
+- 2 worker nodes (Ready)
 - Tất cả system pods đang chạy
 - Mạng pod hoạt động bình thường
+
+# Cài đặt bằng kubepray
+
+## Cài đặt ansible
+
+### Cài đặt ansible
+
+```bash
+sudo apt update && apt upgrade -y
+sudo apt install git python3 python3-pip -y
+
+sudo apt install ansible-core -y
+```
+
+### Cấu hình cluster server
+
+```bash
+# tạo ssh-key, tài khoản root
+#!/bin/bash
+ssh-keygen rsa -t
+#
+ssh-copy-id <your-ip>
+```
+
+### Cài đặt k8s bằng kubepray
+
+Tắt swap
+
+```bash
+sudo swapoff -a
+```
+
+Cài đặt k8s
+
+```bash
+git clone https://github.com/kubernetes-sigs/kubespray.git --branch <release-version>
+#
+cd kubepray
+cp -rfp inventory/sample inventory/<yourname-cluster>
+```
+
+Sửa host cho ansible
+
+```bash
+nano inventory/<yourname-cluster>/anisible.ini
+>>
+[all]
+name-server-1 ansible_host=ip-server-1     ip=ip-server-1
+name-server-2 ansible_host=ip-server-2     ip=ip-server-2
+name-server-3 ansible_host=ip-server-3     ip=ip-server-3
+
+[kube-master]
+name-server-1
+name-server-2
+name-server-3
+
+[kube-node]
+name-server-1
+name-server-2
+name-server-3
+
+[etcd]
+name-server-1
+
+[k8s-cluster:children]
+kube-master
+kube-node
+[calico-rr]
+
+[vault]
+name-server-1
+name-server-2
+name-server-3
+
+
+EOF
+```
+
+Cài đặt k8s
+
+```bash
+anisible-playbook -i inventory/<yourname-cluster>/anisible.ini --become --become-user=root cluster.yml
+```
